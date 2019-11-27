@@ -99,7 +99,7 @@ void recipient_t::receive()
                     
                         shutdown( tmp_link->web_socket, 2 );
                         shutdown( tmp_link->client_socket, 2 );
-                        delete tmp_link->remote_name;
+                        // delete tmp_link->remote_name;
                         
                         sessions.erase( tmp_link );
                         break;
@@ -115,7 +115,7 @@ void recipient_t::receive()
                         
                         shutdown( tmp_link->web_socket, 2 );
                         shutdown( tmp_link->client_socket, 2 );
-                        delete tmp_link->remote_name;
+                        // delete tmp_link->remote_name;
                         
                         sessions.erase( tmp_link );                        
                         break;
@@ -160,6 +160,7 @@ void recipient_t::receive()
              * and thus should never occur if the client can resolve the domain name.)
              * Following the NULL byte terminating USERID, the client must send the destination domain name and terminate 
              * it with another NULL byte. This is used for both "connect" and "bind" requests. 
+             * 
              * https://en.wikipedia.org/wiki/SOCKS#SOCKS4   */
             
                                     uint16_t name_size = strlen(( const char* )sync_socks->sin_zero + 1 ) + 1;
