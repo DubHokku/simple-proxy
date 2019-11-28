@@ -47,6 +47,7 @@ void recipient_t::receive()
             max_set = session->web_socket > max_set?session->web_socket:max_set;
         }
 
+        // use epoll()
         if(( select( max_set + 1, &read_set, &write_set, NULL, NULL )) < 0 )
         {
             if( errno == EINTR )
@@ -78,7 +79,7 @@ void recipient_t::receive()
                 {   // std::cout << "transfer " << snd << " from " << session->data_size << " byte" << std::endl;
                     if( session->data_size == snd )
                     {
-                        delete session->data;
+                        delete[] session->data;
                         session->data = NULL;
                     }
 
@@ -94,12 +95,14 @@ void recipient_t::receive()
                     if(( errno != EINTR ) && ( errno != EAGAIN ) && ( errno != EWOULDBLOCK ))
                     {
                         std::cout << "error on recv() " << strerror( errno ) << std::endl;
+                        
+                        if( session->remote_name != NULL )
+                            delete[] session->remote_name;
+
                         tmp_link = session;
                         session++;
-                    
                         shutdown( tmp_link->web_socket, 2 );
                         shutdown( tmp_link->client_socket, 2 );
-                        // delete tmp_link->remote_name;
                         
                         sessions.erase( tmp_link );
                         break;
@@ -110,12 +113,14 @@ void recipient_t::receive()
                     if( result == 0 )
                     {
                         std::cout << "End Of Data, session " << session->web_socket << " close" << std::endl;
+                        
+                        if( session->remote_name != NULL )
+                            delete[] session->remote_name;
+
                         tmp_link = session;
                         session++;
-                        
                         shutdown( tmp_link->web_socket, 2 );
                         shutdown( tmp_link->client_socket, 2 );
-                        // delete tmp_link->remote_name;
                         
                         sessions.erase( tmp_link );                        
                         break;
@@ -171,16 +176,20 @@ void recipient_t::receive()
                                     session->server_port = ntohs( sync_socks->sin_port );
                                     
                                     std::cout << "request " << session->remote_name << ":" << session->server_port << std::endl;
-                                    struct hostent *he = gethostbyname( session->remote_name );
+                                    struct hostent *he;
+                                    he = gethostbyname( session->remote_name );
                                     if( !he )
                                     {
                                         std::cout << strerror( h_errno ) << std::endl;
-                                        std::cout << session->remote_name << " cannot retrieve address" << std::endl;
+                                        std::cout << session->remote_name << " cannot retrieve address" << std::endl << std::endl;
                                         
+                                        // send socks response deny;
+                                        
+                                        if( session->remote_name != NULL )
+                                            delete[] session->remote_name;
                                         tmp_link = session;
                                         session++;
                                         shutdown( tmp_link->client_socket, 1 );
-                                        delete tmp_link->remote_name;
                                         
                                         sessions.erase( tmp_link );
                                         break;
@@ -195,16 +204,18 @@ void recipient_t::receive()
                                 {   // std::cout << "use socks_v4 \n";
                                     session->server_addr = sync_socks->sin_addr;
                                     session->server_port = ntohs( sync_socks->sin_port );
-                                    std::cout << "request " << inet_ntoa( session->server_addr ) << ":" << session->server_port << std::endl;
+                                    std::cout << "request " << inet_ntoa( session->server_addr ) << ":" << session->server_port << std::endl << std::endl;
                                 }
                             }
                             else
                             {
-                                std::cout << "try connect with no socks_v4 or another command \n";
+                                std::cout << "try connect with no socks_v4 or another command \n\n";
+                                
+                                // send socks response deny;
+                                
                                 tmp_link = session;
                                 session++;
                                 shutdown( tmp_link->client_socket, 1 );
-                                delete tmp_link->remote_name;
                                 
                                 sessions.erase( tmp_link );
                                 break;
